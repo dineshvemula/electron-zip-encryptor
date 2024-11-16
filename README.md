@@ -1,7 +1,3 @@
-Here’s a detailed `README.md` for your ZIP Encryption Electron app:
-
----
-
 # **ZIP Encryption App**
 
 A user-friendly Electron application for securely encrypting ZIP files. This app features a modern UI, automatic encryption key generation and download, and secure handling of nested directories in ZIP files.
