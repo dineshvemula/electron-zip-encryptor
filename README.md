@@ -1,239 +1,177 @@
-To implement the same encryption functionality in an **Electron desktop application**, we can use Node.js modules along with the `electron` framework. Here’s how to encrypt all files in a ZIP folder, encrypt them, and create a new encrypted ZIP file using Electron:
+Here’s a detailed `README.md` for your ZIP Encryption Electron app:
 
 ---
 
-### **Steps to Build the Electron App**
+# **ZIP Encryption App**
 
-#### **1. Install Required Libraries**
-Install the necessary packages:
-
-```bash
-npm install electron cryptography-js adm-zip
-```
+A user-friendly Electron application for securely encrypting ZIP files. This app features a modern UI, automatic encryption key generation and download, and secure handling of nested directories in ZIP files.
 
 ---
 
-#### **2. Electron Main Process**
+## **Features**
 
-Create the `main.js` file to manage the Electron lifecycle and enable communication between the renderer and the main process.
+### **Core Functionalities**
+- Encrypts ZIP files with **AES-256-CBC encryption**.
+- Handles nested directories and files in the ZIP while retaining the directory structure.
+- Automatically downloads the encryption key as a `.txt` file after successful encryption.
 
-```javascript
-const { app, BrowserWindow, ipcMain } = require('electron');
-const path = require('path');
+### **User Experience**
+- **Modern UI**:
+  - Responsive and clean design for better usability.
+  - Clear feedback for success and errors.
+- **Loader Animation**:
+  - Indicates progress during the encryption process.
+  - Prevents duplicate actions by disabling inputs during processing.
+- **Automatic Form Reset**:
+  - Clears all fields and generates a new encryption key after successful encryption.
 
-// Create the main application window
-function createWindow() {
-    const win = new BrowserWindow({
-        width: 800,
-        height: 600,
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            contextIsolation: true,
-            nodeIntegration: false,
-        },
-    });
-
-    win.loadFile('index.html');
-}
-
-// Handle app lifecycle
-app.on('ready', createWindow);
-
-app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        app.quit();
-    }
-});
-
-app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow();
-    }
-});
-
-// IPC listener for encryption request
-ipcMain.handle('encrypt-zip', async (event, { zipPath, outputZipPath, key }) => {
-    const { encryptZipFiles } = require('./encryption'); // Import encryption logic
-    try {
-        await encryptZipFiles(zipPath, outputZipPath, key);
-        return { success: true, message: 'Encryption completed successfully.' };
-    } catch (error) {
-        return { success: false, message: error.message };
-    }
-});
-```
+### **Security Enhancements**
+- Implements a **Content Security Policy (CSP)** to comply with Electron security best practices.
+- Addresses warnings related to insecure CSP and ensures safe content handling.
 
 ---
 
-#### **3. Preload Script**
+## **Setup and Installation**
 
-Create a `preload.js` file to expose the necessary functionality to the renderer process securely.
+### **Prerequisites**
+- **Node.js** (version 14 or higher)
+- **npm**
 
-```javascript
-const { contextBridge, ipcRenderer } = require('electron');
+### **Steps to Run**
 
-contextBridge.exposeInMainWorld('electronAPI', {
-    encryptZip: (zipPath, outputZipPath, key) =>
-        ipcRenderer.invoke('encrypt-zip', { zipPath, outputZipPath, key }),
-});
-```
-
----
-
-#### **4. Encryption Logic**
-
-Create an `encryption.js` file to handle the encryption process.
-
-```javascript
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const AdmZip = require('adm-zip');
-
-// Encrypt a file
-function encryptFile(filePath, key) {
-    const data = fs.readFileSync(filePath);
-    const cipher = crypto.createCipher('aes-256-cbc', key);
-    const encryptedData = Buffer.concat([cipher.update(data), cipher.final()]);
-
-    fs.writeFileSync(filePath, encryptedData);
-}
-
-// Decrypt a file (if needed)
-function decryptFile(filePath, key) {
-    const encryptedData = fs.readFileSync(filePath);
-    const decipher = crypto.createDecipher('aes-256-cbc', key);
-    const decryptedData = Buffer.concat([decipher.update(encryptedData), decipher.final()]);
-
-    fs.writeFileSync(filePath, decryptedData);
-}
-
-// Encrypt all files in a ZIP folder
-async function encryptZipFiles(zipPath, outputZipPath, key) {
-    const tempDir = path.join(__dirname, 'temp');
-    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
-
-    // Extract ZIP contents
-    const zip = new AdmZip(zipPath);
-    zip.extractAllTo(tempDir, true);
-
-    // Encrypt each file
-    const files = fs.readdirSync(tempDir);
-    files.forEach((file) => {
-        const filePath = path.join(tempDir, file);
-        encryptFile(filePath, key);
-    });
-
-    // Recompress the encrypted files
-    const encryptedZip = new AdmZip();
-    files.forEach((file) => {
-        const filePath = path.join(tempDir, file);
-        encryptedZip.addLocalFile(filePath);
-    });
-    encryptedZip.writeZip(outputZipPath);
-
-    // Cleanup
-    files.forEach((file) => fs.unlinkSync(path.join(tempDir, file)));
-    fs.rmdirSync(tempDir);
-}
-
-module.exports = { encryptZipFiles, decryptFile };
-```
-
----
-
-#### **5. Renderer Process**
-
-Create the frontend interface for the Electron app in `index.html` and `renderer.js`.
-
-**`index.html`**
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ZIP Encryption App</title>
-</head>
-<body>
-    <h1>ZIP File Encryption</h1>
-    <label for="zipFile">Select ZIP File:</label>
-    <input type="file" id="zipFile" accept=".zip" />
-    <br />
-    <label for="outputFile">Encrypted ZIP Name:</label>
-    <input type="text" id="outputFile" placeholder="Encrypted.zip" />
-    <br />
-    <label for="key">Encryption Key:</label>
-    <input type="password" id="key" />
-    <br />
-    <button id="encryptButton">Encrypt ZIP</button>
-    <p id="status"></p>
-    <script src="./renderer.js"></script>
-</body>
-</html>
-```
-
-**`renderer.js`**
-```javascript
-document.getElementById('encryptButton').addEventListener('click', async () => {
-    const zipFile = document.getElementById('zipFile').files[0];
-    const outputFile = document.getElementById('outputFile').value;
-    const key = document.getElementById('key').value;
-
-    if (!zipFile || !outputFile || !key) {
-        document.getElementById('status').textContent = 'Please fill in all fields.';
-        return;
-    }
-
-    const zipPath = zipFile.path;
-    const outputZipPath = zipFile.path.replace(zipFile.name, outputFile);
-
-    const response = await window.electronAPI.encryptZip(zipPath, outputZipPath, key);
-    document.getElementById('status').textContent = response.message;
-});
-```
-
----
-
-### **6. Run the App**
-
-1. Initialize the Electron app:
-
+1. **Clone the Repository**:
    ```bash
-   npm init -y
+   git clone <repository-url>
+   cd <project-directory>
    ```
 
-2. Add the start script in `package.json`:
-
-   ```json
-   "scripts": {
-       "start": "electron ."
-   }
+2. **Install Dependencies**:
+   ```bash
+   npm install
    ```
 
-3. Run the app:
-
+3. **Run the Application**:
    ```bash
    npm start
    ```
 
+4. **Package the Application (Optional)**:
+   To create an executable:
+   ```bash
+   npm run build
+   ```
+
 ---
 
-### **Key Features**
-- **Encrypt ZIP Files**: The app extracts the files from a ZIP archive, encrypts them, and compresses them back into an encrypted ZIP.
-- **Secure Encryption**: Uses `AES-256-CBC` for encryption.
-- **GUI**: A user-friendly interface built with HTML and JavaScript.
+## **How to Use**
+
+1. **Launch the App**:
+   - Start the app using the `npm start` command.
+
+2. **Select a ZIP File**:
+   - Click **"Choose ZIP File"** and select the ZIP you want to encrypt.
+
+3. **Provide an Output File Name**:
+   - Enter the desired name for the encrypted ZIP (e.g., `encrypted.zip`).
+
+4. **Encryption Key**:
+   - The app generates an encryption key automatically and displays it.
+   - This key is required to decrypt the files later.
+
+5. **Start Encryption**:
+   - Click **"Encrypt ZIP"** to begin the process.
+   - The app will show a loader while processing and notify you when complete.
+
+6. **Key Download**:
+   - After successful encryption, the app automatically downloads the encryption key as a `.txt` file.
+
+7. **Form Reset**:
+   - The form resets after success, and a new encryption key is generated for the next operation.
 
 ---
 
-### **Security Considerations**
-1. **Key Storage**:
-   - The key should not be hardcoded. Allow users to input the key for each operation.
+## **Folder Structure**
 
-2. **Cleanup**:
-   - Ensure temporary files and directories are removed after processing.
+```
+project/
+├── main.js             # Main Electron process
+├── preload.js          # Preload script for secure API exposure
+├── renderer.js         # Renderer process (frontend logic)
+├── encryption.js       # Encryption logic
+├── index.html          # Main UI file
+├── package.json        # Project metadata and dependencies
+├── temp/               # Temporary directory for extracted files
+└── README.md           # Project documentation
+```
 
-3. **Encryption Algorithm**:
-   - `AES-256-CBC` is a secure and widely used encryption standard.
+---
 
-This implementation allows you to encrypt and secure ZIP files directly from an Electron app with a smooth GUI experience.
+## **Technologies Used**
+
+- **Electron**: For building cross-platform desktop apps.
+- **Node.js**: Backend processing for encryption.
+- **AdmZip**: For handling ZIP files (extraction and creation).
+- **AES-256-CBC**: Secure encryption algorithm.
+
+---
+
+## **Security Best Practices**
+
+- **Content Security Policy (CSP)**:
+  - Protects against code injection attacks.
+  - Configured to allow only trusted resources.
+
+- **Temporary File Cleanup**:
+  - Automatically deletes extracted files and directories after encryption to ensure no sensitive data remains.
+
+---
+
+## **Known Issues and Limitations**
+
+- **Decryption**:
+  - Currently, the app supports encryption only. Decryption functionality can be added in future versions.
+- **Large Files**:
+  - Encryption of very large ZIP files may take longer, depending on system resources.
+
+---
+
+## **Future Enhancements**
+
+- Add decryption functionality to complement encryption.
+- Support drag-and-drop for file selection.
+- Improve performance for large ZIP files.
+- Add localization support for multi-language usage.
+
+---
+
+## **Contributing**
+
+Contributions are welcome! Please follow these steps:
+1. Fork the repository.
+2. Create a feature branch:
+   ```bash
+   git checkout -b feature-name
+   ```
+3. Commit your changes:
+   ```bash
+   git commit -m "Description of changes"
+   ```
+4. Push to your branch:
+   ```bash
+   git push origin feature-name
+   ```
+5. Open a Pull Request.
+
+---
+
+## **License**
+
+This project is licensed under the **MIT License**. See the `LICENSE` file for details.
+
+---
+
+## **Acknowledgments**
+
+- **Electron Documentation**: For guidance on Electron development.
+- **AdmZip Library**: For ZIP file manipulation.
+- **Node.js Crypto**: For implementing AES encryption.
