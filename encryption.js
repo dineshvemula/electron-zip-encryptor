@@ -60,7 +60,9 @@ function deleteDirectoryRecursive(dirPath) {
 async function encryptZipFiles(zipPath, outputZipPath, key) {
     console.log('Encrypting ZIP file:', zipPath);
 
-    const tempDir = path.join(__dirname, 'temp');
+    const os = require('os');
+const { app } = require('electron');
+const tempDir = path.join(app.getPath('temp'), 'zip-encryptor-temp');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
     // Extract ZIP contents

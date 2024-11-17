@@ -3,7 +3,9 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
 module.exports = {
   packagerConfig: {
-    asar: true,
+    asar: {
+        unpack: '**/temp/**', // Exclude the temp directory from being packed into the asar
+    },
     icon: './assets/icon',
   },
   rebuildConfig: {},
