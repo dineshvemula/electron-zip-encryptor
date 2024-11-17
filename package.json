@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Encrypt files in a ZIP using Electron.",
   "author": "Dinesh Vemula",
-  "main": "main.js",  
+  "main": "main.js",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
@@ -26,6 +26,7 @@
     "@electron-forge/maker-zip": "^7.5.0",
     "@electron-forge/plugin-auto-unpack-natives": "^7.5.0",
     "@electron-forge/plugin-fuses": "^7.5.0",
+    "@electron/fuses": "^1.8.0",
     "electron": "^33.2.0",
     "electron-forge": "^5.2.4",
     "electron-packager": "^17.1.2"

@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const AdmZip = require('adm-zip');
+const os = require('os');
+const { app } = require('electron'); // Ensure Electron app module is available
 
 // Encrypt a single file
 function encryptFile(filePath, key) {
@@ -60,9 +62,7 @@ function deleteDirectoryRecursive(dirPath) {
 async function encryptZipFiles(zipPath, outputZipPath, key) {
     console.log('Encrypting ZIP file:', zipPath);
 
-    const os = require('os');
-const { app } = require('electron');
-const tempDir = path.join(app.getPath('temp'), 'zip-encryptor-temp');
+    const tempDir = path.join(app.getPath('temp'), 'zip-encryptor-temp');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
     // Extract ZIP contents
@@ -77,8 +77,9 @@ const tempDir = path.join(app.getPath('temp'), 'zip-encryptor-temp');
     traverseAndEncrypt(tempDir, key, encryptedZip, tempDir);
 
     // Write the encrypted ZIP file
-    encryptedZip.writeZip(outputZipPath);
-    console.log('Encrypted ZIP file created at:', outputZipPath);
+    const resolvedOutputPath = path.resolve(outputZipPath); // Ensure absolute path
+    encryptedZip.writeZip(resolvedOutputPath);
+    console.log('Encrypted ZIP file created at:', resolvedOutputPath);
 
     // Cleanup
     deleteDirectoryRecursive(tempDir);
